@@ -1,0 +1,23 @@
+# Datasets (public sources cited in README)
+/data/
+/all_disease_dataset-mixed/
+
+# Model weights (too large for GitHub)
+*.pth
+*.pt
+*.ckpt
+
+# Python / Jupyter
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+
+# Local tooling
+.claude/
+.vscode/
+
+# Local notes and stray files
+TODO
+SESSION_EXPORT_*.md
+NUL.png
+*.bak
