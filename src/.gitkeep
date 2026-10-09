@@ -1,0 +1,10 @@
+# All source code for the GLS synthetic disease generation project lives here.
+#
+# Subfolders:
+# - data/: Data loaders and transforms
+# - geometry/: Lesion mask generation algorithms
+# - synthesis/: Synthetic dataset creation and rendering
+# - gan/: Patch-based GANs for lesion texture (optional)
+# - models/: Segmentation and severity regression models
+# - evaluation/: Metrics, comparison, and visualization
+# - utils/: Logging, plotting, reproducibility helpers
