@@ -1,0 +1,3 @@
+# Store experiment runs here.
+# Subfolders: baselines/, synthetic_only/, mixed_real_synthetic/
+# Each folder contains configs, logs, and outputs for reproducibility.
