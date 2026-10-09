@@ -1,5 +1,16 @@
+# PyTorch with CUDA 12.1 wheels (change cu121 to cpu for a CPU-only install)
+--extra-index-url https://download.pytorch.org/whl/cu121
+torch==2.5.1
+torchvision==0.20.1
+
 numpy
 opencv-python
+pillow
+scikit-image
+scipy
 matplotlib
 tqdm
 
+# Notebooks
+jupyter
+ipywidgets
