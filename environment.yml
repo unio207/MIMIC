@@ -1,4 +1,4 @@
-name: isef2026
+name: mimic
 channels:
   - conda-forge
   - defaults

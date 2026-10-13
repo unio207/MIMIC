@@ -31,13 +31,13 @@ def main():
     parser.add_argument(
         "--input",
         type=str,
-        default=r"c:\Users\henry\Desktop\isef2026\data\gan_a\phase_1\lesion_synthetic_binary",
+        default=str(Path(__file__).resolve().parent / "data" / "gan_a" / "phase_1" / "lesion_synthetic_binary"),
         help="Input folder with mask images",
     )
     parser.add_argument(
         "--output",
         type=str,
-        default=r"c:\Users\henry\Desktop\isef2026\data\gan_a\phase_1\lesion_synthetic_binary_processed",
+        default=str(Path(__file__).resolve().parent / "data" / "gan_a" / "phase_1" / "lesion_synthetic_binary_processed"),
         help="Output folder for processed masks",
     )
     parser.add_argument(
