@@ -9,27 +9,26 @@
   <img src="https://img.shields.io/badge/PyTorch-2.5-EE4C2C?logo=pytorch&logoColor=white" alt="PyTorch 2.5">
   <img src="https://img.shields.io/badge/ISEF-2026-1f6feb" alt="ISEF 2026">
   <img src="https://img.shields.io/badge/status-research%20in%20progress-orange" alt="Status: research in progress">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="License: MIT"></a>
 </p>
+
+---
+
+MIMIC is a two-stage GAN pipeline that generates **synthetic diseased corn leaves together with exact lesion masks**, so that segmentation and severity models for **gray leaf spot (GLS)** can be trained when real annotated data is scarce. The first stage, GAN-A, reaches SSIM 0.958 and PSNR 41.4 dB on 38 held-out leaves; the second stage and the downstream comparison are in progress.
 
 <p align="center">
-  <img src="media/ganA_real_lesion_inpaint.png" alt="GAN-A removing gray leaf spot lesions from a real corn leaf: original, lesion mask, inpainted output" width="900">
+  <img src="media/ganA_real_lesion_inpaint.png" alt="Three panels of a real corn leaf with gray leaf spot: the original, the lesion mask in red, and GAN-A's output with the lesions filled in green but the veins smoothed over inside the masked areas" width="900">
+  <br>
+  <sub>GAN-A Phase 1 applied to a real GLS leaf it was never fine-tuned on. Lesions are removed, but large masked areas come out smoothed, without veins.</sub>
 </p>
-
----
-
-**Source:** <a href="https://github.com/unio207/MIMIC">https://github.com/unio207/MIMIC</a>
-
----
-
-MIMIC is a two-stage GAN pipeline that generates **synthetic diseased corn leaves together with exact lesion masks**, so that segmentation and severity models for **gray leaf spot (GLS)** can be trained when real annotated data is scarce.
 
 The key features are:
 
 * **Anatomy-preserving**: every synthetic image starts from a *real* leaf. MIMIC never hallucinates leaf structure from scratch; it only removes or adds lesions.
 * **Paired by construction**: each generated image comes with a pixel-level lesion mask, ready for supervised segmentation.
-* **Two decoupled stages**: GAN-A learns lesion *removal*, GAN-B learns lesion *synthesis*. Each is a far more constrained task than "generate a diseased leaf."
+* **Two decoupled stages**: GAN-A takes RGB plus a lesion mask and returns the leaf without lesions; GAN-B takes a healthy RGB leaf and returns a diseased RGB leaf plus the mask it painted.
 * **Biologically grounded masks**: synthetic lesions reuse the real shapes and colors of lesions cut from ~260 infected leaves, aligned to each leaf's orientation.
-* **Modular PyTorch code**: the generators, discriminator and loss functions are small, reusable modules in `src/models/`.
+* **Reconstruction-weighted losses**: GAN-A trains on L1 (λ = 100), SSIM (λ = 10), VGG16 perceptual (λ = 10) and LSGAN adversarial (λ = 1) loss, so pixel accuracy dominates and the adversarial term only sharpens texture.
 
 ## How it works
 
@@ -58,13 +57,13 @@ Agricultural crop disease management relies heavily on accurate disease detectio
 
 This study proposes MIMIC: a multi-stage inpainting model pipeline for diseased leaf image creation that produces biologically constrained synthetic data to improve detection model accuracy and reliability, supporting earlier intervention and reducing yield loss. Unlike conventional methods that attempt to generate diseased leaves in one step, the proposed method separates the process into two stages. Each stage is made up of a generative adversarial network (GAN) operating sequentially: the first model (GAN-A) removes diseased lesions from real diseased leaves through inpainting to create pseudo-healthy pairs, and the second model (GAN-B) generates synthetic disease lesions from real healthy leaves by training on pseudo-healthy pairs created by the first. By decoupling lesion removal and synthesis, real leaves can be introduced in each training stage, allowing MIMIC to maintain anatomical structure.
 
-The output images are used in conjunction with real leaves to train and compare a severity estimation model against one trained on real data alone. The model trained on MIMIC-augmented data showed improvements in accuracy and generalizability on unseen field images, suggesting that MIMIC can strengthen existing precision disease management technology, even across other diseases.
+The output images are used in conjunction with real leaves to train and compare a severity estimation model against one trained on real data alone. The hypothesis is that the model trained on MIMIC-augmented data will be more accurate and generalize better to unseen field images than the real-only model; that comparison has not been run yet (see Roadmap).
 
 </details>
 
 ## Results so far
 
-**GAN-A Phase 1** (self-supervised inpainting on healthy leaves with synthetic lesion masks), evaluated on 38 held-out test images:
+**GAN-A Phase 1** (self-supervised inpainting on healthy leaves with synthetic lesion masks), evaluated at the epoch-145 checkpoint on 38 held-out test images. Scores are over the full 512×512 image with pixels in [0, 1], so unmasked pixels count too and the numbers are higher than inpainting quality inside the masks alone:
 
 | Metric | Mean |
 |---|---|
@@ -72,12 +71,12 @@ The output images are used in conjunction with real leaves to train and compare 
 | SSIM ↑ | 0.958 |
 | PSNR ↑ | 41.4 dB |
 
-Per-image scores are in [`results/logs/ganA_test_per_image_metrics.csv`](results/logs/ganA_test_per_image_metrics.csv), and training curves are in [`results/logs/`](results/logs).
+Per-image scores are in [`results/logs/ganA_test_per_image_metrics.csv`](results/logs/ganA_test_per_image_metrics.csv), and per-epoch loss histories (JSON) for the 50- and 100-epoch runs are in [`results/logs/`](results/logs). The log for the run that reached epoch 145 is not committed.
 
 <p align="center">
   <img src="media/gls_mask_generation_stages.png" alt="Lesion mask extraction stages: color thresholding, leaf mask, morphology, final overlay" width="700">
   <br>
-  <sub>Real lesion mask extraction: HSV thresholding → leaf clipping → morphological cleanup → final mask.</sub>
+  <sub>Data preparation, not a GAN-A result: real lesion mask extraction by HSV thresholding → leaf clipping → morphological cleanup → final mask.</sub>
 </p>
 
 ## Roadmap
@@ -86,8 +85,8 @@ Per-image scores are in [`results/logs/ganA_test_per_image_metrics.csv`](results
 |---|---|
 | Lesion mask extraction (real + synthetic) | ✅ Done |
 | Models and losses (U-Net, PatchGAN, perceptual, SSIM, LSGAN) | ✅ Done |
-| GAN-A Phase 1: inpainting on healthy leaves | ✅ Trained, 150 epochs |
-| GAN-B baseline: dual-head image + mask generator | 🔄 In progress |
+| GAN-A Phase 1: inpainting on healthy leaves | ✅ Trained, evaluated at epoch 145 |
+| GAN-B baseline: dual-head image + mask generator | 🔄 In progress (pseudo-healthy inputs come from OpenCV Telea inpainting for now; GAN-A outputs not yet wired in) |
 | GAN-A Phase 2: fine-tuning on real diseased leaves | ⏸️ Deferred |
 | Real-data-only U-Net segmentation baseline | 🔄 In progress |
 | Evaluation: IoU / Dice, severity MAE, FID | ⏳ Planned |
@@ -109,7 +108,7 @@ $ conda activate mimic
 $ pip install -r requirements.txt
 ```
 
-`requirements.txt` installs the CUDA 12.1 build of PyTorch. For a CPU-only machine, change `cu121` to `cpu` in its first line.
+`requirements.txt` installs the CUDA 12.1 build of PyTorch. For a CPU-only machine, change `cu121` to `cpu` in its `--extra-index-url` line.
 
 [`environment.yml`](environment.yml) has the exact, fully pinned environment used during development (Windows).
 
@@ -117,9 +116,10 @@ $ pip install -r requirements.txt
 
 Datasets and model weights are **not stored in this repository** because of their size. Images come from these public sources:
 
-1. Wu, D., Barbedo, J. G. A., Stewart, E. L., Zhang, J., & Nelson, R. J. (2020). *A curated dataset of maize leaf images for disease identification.* Mendeley Data, V1. https://data.mendeley.com/datasets/vy629dngm8/1
-2. Hughes, D. P., & Salathé, M. (2015). *An open access repository of images on plant health to enable the development of mobile disease diagnostics.* PlantVillage. https://plantvillage.psu.edu/
-3. Wang, G., Sun, Y., & Wang, J. (2017). *CD&S Dataset: Handheld imagery dataset acquired under field conditions for corn disease identification and severity estimation.* https://www.kaggle.com/datasets/gpiosenka/corn-disease-and-severity
+1. Wu, D., Barbedo, J. G. A., Stewart, E. L., Zhang, J., & Nelson, R. J. (2020). *A curated dataset of maize leaf images for disease identification.*
+2. Ahmad, M. H. (2025). *Seasonal Corn Leaf Disease Dataset: A Multi-Year Collection for Robust Analysis.* Mendeley Data, V1. https://doi.org/10.17632/vy629dngm8.1
+3. Hughes, D. P., & Salathé, M. (2015). *An open access repository of images on plant health to enable the development of mobile disease diagnostics.* PlantVillage. https://plantvillage.psu.edu/
+4. Ahmad, A., Saraswat, D., El Gamal, A., & Johal, G. (2021). *CD&S Dataset: Handheld imagery dataset acquired under field conditions for corn disease identification and severity estimation.* arXiv:2110.12084. https://arxiv.org/abs/2110.12084
 
 The code expects this local layout:
 
@@ -129,8 +129,8 @@ data/
 ├── diseased/gls/                    ~260 real GLS-infected leaves
 ├── masks/
 │   ├── leaf/                        leaf boundary masks
-│   ├── lesion_real/                 real lesion masks (per-image HSV thresholds)
-│   ├── lesion_real_expanded/        morphologically expanded real masks
+│   ├── lesion_real/gls/             real lesion masks (per-image HSV thresholds)
+│   ├── lesion_real_expanded/gls/    morphologically expanded real masks
 │   ├── lesion_synthetic/            synthetic RGBA lesion overlays
 │   ├── lesion_synthetic_binary/     binary PNGs (0/255)
 │   └── lesion_synthetic_binary01_npy/   strict 0/1 arrays for training
@@ -140,14 +140,14 @@ data/
 
 ## Usage
 
-Most stages run as notebooks, so they can be used both locally and on cloud GPUs (the `*_linux.ipynb` variants target Lambda Labs):
+Most stages run as notebooks, so they can be used both locally and on cloud GPUs (the `*_linux.ipynb` variants target Lambda Labs). The Windows notebooks (`ganA_train.ipynb`, `ganA_data_setup.ipynb`, the `gls_mask_creator*.ipynb` pair) and `hsv_thresholds_loader.py` still hardcode `C:/Users/henry/...` paths; edit those before running them elsewhere. `train_ganB_baseline.py` resolves paths from the repo root.
 
 | Step | Entry point |
 |---|---|
 | Extract real lesion masks | `src/lesion_mask/gls_mask_creator.ipynb` |
 | Generate synthetic lesion masks | `src/data/synthetic_mask_generator.py` |
 | Prepare GAN-A data | `src/gan/ganA_data_setup.ipynb` |
-| Train GAN-A | `src/gan/ganA_train.ipynb` / `ganA_train_linux.ipynb` |
+| Train GAN-A | `src/gan/ganA_train.ipynb` / `ganA_train_linux.ipynb`, or the script `src/gan/train_ganA_phase1.py` |
 | Test GAN-A | `src/gan/ganA_model_testing.ipynb` |
 | Train GAN-B | `src/gan/ganB_train_linux.ipynb` or the script below |
 | Segmentation baseline | `src/image_seg/unet_image_seg_real_data.ipynb` |
@@ -170,7 +170,7 @@ Checkpoints are written to `src/models/checkpoints/`, and logs and sample grids 
 * **Generator**: U-Net encoder–decoder with skip connections. Input is RGB + binary lesion mask (4 channels), output is RGB (3 channels). Feature widths [64, 128, 256, 512] with a sigmoid output.
 * **Discriminator**: 70×70 PatchGAN with spectral and instance normalization.
 * **Losses**: L1 (λ = 100), SSIM (λ = 10), VGG16 perceptual on relu1_2/2_2/3_3/4_3 (λ = 10), LSGAN adversarial (λ = 1).
-* **Training**: mixed precision (AMP) on an A100, 90/10 train/test split, resumable checkpoints, 150 epochs.
+* **Training**: mixed precision (AMP) on an A100, 90/10 train/test split, resumable checkpoints, evaluated at the epoch-145 checkpoint.
 
 </details>
 
@@ -194,6 +194,8 @@ src/
 ├── lesion_mask/   HSV-threshold lesion mask extraction
 └── image_seg/     U-Net segmentation baseline
 experiments/       experiment notebooks
+configs/, notebooks/   empty placeholders (.gitkeep)
+morph_postprocess_mask.py   morphological cleanup for lesion masks
 results/           training sample figures and metric logs
 media/             figures used in this README
 ```
